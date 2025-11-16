@@ -1,7 +1,6 @@
 package com.flipkart.test;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.Duration;
 import java.util.Set;
 
 import org.openqa.selenium.By;
@@ -12,9 +11,7 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.interactions.Actions;
-import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
-import java.time.Duration;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
 
@@ -385,15 +382,28 @@ public class FlipkartTest {
                     js.executeScript("arguments[0].scrollIntoView({block: 'center'});", removeBtn);
                     Thread.sleep(1000);
                     forceClick(driver, removeBtn, js);
-                    System.out.println("✅✅ ITEM REMOVED!");
-                    itemRemoved = true;
+                    System.out.println("✅ Remove button clicked, waiting for confirmation popup...");
                     Thread.sleep(2000);
                     
+                    // Click the confirmation Remove button in popup
                     try {
-                        WebElement confirmRemove = driver.findElement(By.xpath("//div[contains(text(),'Remove')]"));
+                        WebElement confirmRemove = driver.findElement(By.xpath("//div[@class='sBxzFz fF30ZI A0MXnh']"));
+                        js.executeScript("arguments[0].style.border='5px solid red'", confirmRemove);
+                        Thread.sleep(500);
                         forceClick(driver, confirmRemove, js);
+                        System.out.println("✅✅ ITEM REMOVED - CONFIRMATION CLICKED!");
+                        itemRemoved = true;
                         Thread.sleep(2000);
-                    } catch (Exception e) { }
+                    } catch (Exception e) {
+                        System.out.println("⚠️ Confirmation button not found, trying alternate...");
+                        try {
+                            WebElement confirmAlt = driver.findElement(By.xpath("//div[contains(@class,'sBxzFz') and contains(@class,'fF30ZI')]"));
+                            forceClick(driver, confirmAlt, js);
+                            System.out.println("✅✅ ITEM REMOVED - ALTERNATE CONFIRMATION!");
+                            itemRemoved = true;
+                            Thread.sleep(2000);
+                        } catch (Exception e2) { }
+                    }
                     break;
                 } catch (Exception e) { }
             }
@@ -410,25 +420,28 @@ public class FlipkartTest {
             System.out.println("\n🗑️ Removing PUMA from wishlist...");
             boolean pumaRemoved = false;
             String[] wishlistRemoveXPaths = {
-                "//div[contains(text(),'PUMA')]/ancestor::div[contains(@class,'_3O0U0u')]//div[contains(@class,'_3dtsli') and contains(text(),'Remove')]",
-                "//div[contains(text(),'PUMA')]/ancestor::div[contains(@class,'_3O0U0u')]//button[contains(text(),'Remove')]",
-                "(//div[contains(@class,'_3dtsli') and contains(text(),'Remove')])[1]",
-                "(//button[contains(text(),'Remove')])[1]"
+                "//div[contains(text(),'PUMA')]/ancestor::div[contains(@class,'_1fkBrH')]//div[@class='EjOX7q CwZdGm pPzhjs']",
+                "(//div[@class='EjOX7q CwZdGm pPzhjs'])[1]",
+                "//div[contains(@class,'EjOX7q') and contains(@class,'CwZdGm')]",
+                "//div[contains(text(),'PUMA')]/ancestor::div[contains(@class,'_3O0U0u')]//div[contains(@class,'EjOX7q')]",
+                "(//div[contains(@class,'EjOX7q')])[1]"
             };
 
             for (String xpath : wishlistRemoveXPaths) {
                 try {
-                    WebElement removeBtn = driver.findElement(By.xpath(xpath));
-                    js.executeScript("arguments[0].style.border='5px solid orange'", removeBtn);
+                    WebElement binIcon = driver.findElement(By.xpath(xpath));
+                    js.executeScript("arguments[0].style.border='5px solid orange'", binIcon);
                     Thread.sleep(500);
-                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", removeBtn);
+                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", binIcon);
                     Thread.sleep(1000);
-                    forceClick(driver, removeBtn, js);
-                    System.out.println("✅✅ PUMA REMOVED FROM WISHLIST!");
+                    forceClick(driver, binIcon, js);
+                    System.out.println("✅✅ BIN ICON CLICKED - PUMA REMOVED FROM WISHLIST!");
                     pumaRemoved = true;
                     Thread.sleep(2000);
                     break;
-                } catch (Exception e) { }
+                } catch (Exception e) { 
+                    System.out.println("⚠️ Trying next bin icon XPath...");
+                }
             }
             if (!pumaRemoved) System.out.println("❌ Failed to remove from wishlist");
 
