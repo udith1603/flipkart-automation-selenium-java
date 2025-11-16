@@ -11,6 +11,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
@@ -18,6 +19,32 @@ import java.time.Duration;
 import io.github.bonigarcia.wdm.WebDriverManager;
 
 public class FlipkartTest {
+    
+    // Helper method to force click with multiple strategies
+    public static void forceClick(WebDriver driver, WebElement element, JavascriptExecutor js) throws InterruptedException {
+        try {
+            // Strategy 1: Normal click
+            element.click();
+            System.out.println("✅ Clicked with normal click");
+        } catch (Exception e1) {
+            try {
+                // Strategy 2: JS click
+                js.executeScript("arguments[0].click();", element);
+                System.out.println("✅ Clicked with JS click");
+            } catch (Exception e2) {
+                try {
+                    // Strategy 3: Actions click
+                    Actions actions = new Actions(driver);
+                    actions.moveToElement(element).click().perform();
+                    System.out.println("✅ Clicked with Actions click");
+                } catch (Exception e3) {
+                    System.out.println("❌ All click methods failed!");
+                }
+            }
+        }
+        Thread.sleep(500);
+    }
+    
     public static void main(String[] args) throws Exception {
 
         // Setup ChromeDriver automatically
@@ -32,6 +59,7 @@ public class FlipkartTest {
         WebDriver driver = new ChromeDriver(options);
         JavascriptExecutor js = (JavascriptExecutor) driver;
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+        Actions actions = new Actions(driver);
 
         try {
             // Open Flipkart
@@ -49,24 +77,25 @@ public class FlipkartTest {
                 System.out.println("⚠️ No login popup found");
             }
 
-            // // Click Login button
+            // Click Login button
             Thread.sleep(2000);
             try {
                 driver.findElement(By.xpath("//span[text()='Login']")).click();
+                Thread.sleep(1000);
             } catch (Exception e) {
                 System.out.println("Login button not visible, moving on...");
             }
 
             
-            // // Enter mobile number
-            driver.findElement(By.xpath("//input[contains(@class,'r4vIwl') and contains(@class,'BV+Dqf')]")).sendKeys("8799516975");
+            // Enter mobile number
+            driver.findElement(By.xpath("//input[contains(@class,'r4vIwl') and contains(@class,'BV+Dqf')]")).sendKeys("9099428226");
 
 
-            // //// Click Request OTP / Continue
+            // Click Request OTP / Continue
             driver.findElement(By.xpath("//button[contains(text(),'Request OTP')]")).click();
 
-            // // Wait 20 sec for OTP manually
-            System.out.println("Waiting for 20 seconds... Please enter OTP manually.");
+            // Wait 20 sec for OTP manually
+            System.out.println("⏳ Waiting for 20 seconds... Please enter OTP manually.");
             Thread.sleep(20000);
              
             // Search for shoes
@@ -81,56 +110,65 @@ public class FlipkartTest {
             System.out.println("✅ PUMA filter applied");
             Thread.sleep(4000);
 
-            // Store parent window
-            String parentWindow = driver.getWindowHandle();
-            System.out.println("✅ Parent window stored: " + parentWindow);
-
-            // Click first product
-            WebElement firstProduct = driver.findElement(By.xpath("(//a[contains(@href,'/p/')])[1]"));
-            firstProduct.click();
-            System.out.println("✅ Clicked first product");
-            Thread.sleep(5000);
-
-            // THE FIX: Switch to CORRECT tab by checking all tabs
-            ArrayList<String> tabs = new ArrayList<>(driver.getWindowHandles());
-            System.out.println("📊 Total windows open: " + tabs.size());
+            // ========== PRODUCT 1 - Terranova Sneakers ==========
+            System.out.println("\n🔥 === PROCESSING PRODUCT 1 (Terranova) === 🔥");
             
-            boolean foundProductPage = false;
-            for (String tab : tabs) {
-                driver.switchTo().window(tab);
-                String currentUrl = driver.getCurrentUrl();
-                System.out.println("🔍 Checking tab with URL: " + currentUrl);
-                
-                // Find the tab that has /p/ in URL (product page)
-                if (currentUrl.contains("/p/") && currentUrl.contains("flipkart.com")) {
-                    System.out.println("✅✅✅ FOUND THE CORRECT PRODUCT TAB!");
-                    foundProductPage = true;
+            String parentWindow = driver.getWindowHandle();
+            Set<String> existingWindows = driver.getWindowHandles();
+            
+            // Click Terranova product
+            boolean terranovaClicked = false;
+            String[] terranovaXPaths = {
+                "//a[contains(@title,'Terranova')]",
+                "//div[contains(text(),'Terranova')]/ancestor::a",
+                "//a[contains(@href,'/p/') and contains(.,'Terranova')]"
+            };
+            
+            for (String xpath : terranovaXPaths) {
+                try {
+                    WebElement terranovaProduct = driver.findElement(By.xpath(xpath));
+                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", terranovaProduct);
+                    Thread.sleep(1000);
+                    js.executeScript("arguments[0].click();", terranovaProduct);
+                    System.out.println("✅ Clicked Terranova product");
+                    terranovaClicked = true;
+                    Thread.sleep(4000);
+                    break;
+                } catch (Exception e) { }
+            }
+            
+            if (!terranovaClicked) {
+                System.out.println("⚠️ Terranova not found, clicking first PUMA product");
+                WebElement firstProd = driver.findElement(By.xpath("(//a[contains(@href,'/p/')])[1]"));
+                js.executeScript("arguments[0].click();", firstProd);
+                Thread.sleep(4000);
+            }
+
+            // Switch to NEW tab only
+            Set<String> allWindows = driver.getWindowHandles();
+            for (String window : allWindows) {
+                if (!existingWindows.contains(window)) {
+                    driver.switchTo().window(window);
+                    System.out.println("✅ Switched to Terranova product tab");
                     break;
                 }
             }
-
-            if (!foundProductPage) {
-                System.out.println("❌ Could not find product page! Trying last tab...");
-                driver.switchTo().window(tabs.get(tabs.size() - 1));
-            }
-
             Thread.sleep(3000);
-            System.out.println("📍 Final URL: " + driver.getCurrentUrl());
 
-            // Scroll down slowly to load everything
+            // Scroll down to load all elements
             js.executeScript("window.scrollTo({top: 500, behavior: 'smooth'});");
             Thread.sleep(2000);
-            System.out.println("✅ Scrolled down 500px");
-
-            // Try multiple XPaths for WISHLIST
-            System.out.println("\n🔍 Trying to find WISHLIST button...");
-            boolean wishlistClicked = false;
             
+            // Scroll up a bit to see buttons
+            js.executeScript("window.scrollTo({top: 300, behavior: 'smooth'});");
+            Thread.sleep(2000);
+
+            // WISHLIST PRODUCT 1 - Using YOUR original XPaths
+            boolean wishlist1 = false;
             String[] wishlistXPaths = {
                 "//div[@class='oUss6M _2EB96d jmR1E0 gREhVj']",
                 "//button[contains(text(),'ADD TO WISHLIST')]",
                 "//span[contains(text(),'ADD TO WISHLIST')]",
-                "//div[contains(@class,'_2EB96d')]",
                 "//*[contains(text(),'WISHLIST')]",
                 "//button[contains(@class,'_2KpZ6l _1GBz0c')]"
             };
@@ -138,134 +176,270 @@ public class FlipkartTest {
             for (String xpath : wishlistXPaths) {
                 try {
                     WebElement wishlistBtn = driver.findElement(By.xpath(xpath));
-                    System.out.println("✅ Found wishlist with xpath: " + xpath);
-                    
-                    // Highlight element for debugging
                     js.executeScript("arguments[0].style.border='5px solid red'", wishlistBtn);
-                    Thread.sleep(1000);
-                    
-                    // Scroll to it
+                    Thread.sleep(500);
                     js.executeScript("arguments[0].scrollIntoView({block: 'center'});", wishlistBtn);
                     Thread.sleep(1000);
                     
-                    // Try JS click
-                    js.executeScript("arguments[0].click();", wishlistBtn);
-                    System.out.println("✅✅✅ WISHLIST CLICKED!");
-                    wishlistClicked = true;
+                    // Remove any overlays
+                    js.executeScript("var overlays = document.querySelectorAll('[class*=\"overlay\"],[class*=\"modal\"]'); overlays.forEach(function(el){el.remove();});");
+                    
+                    // Force click with multiple strategies
+                    forceClick(driver, wishlistBtn, js);
+                    
+                    System.out.println("✅✅ PRODUCT 1 - WISHLIST ADDED!");
+                    wishlist1 = true;
                     Thread.sleep(2000);
                     break;
-                } catch (Exception e) {
-                    // Silent fail, try next xpath
+                } catch (Exception e) { 
+                    System.out.println("⚠️ Wishlist XPath failed: " + xpath);
                 }
             }
+            if (!wishlist1) System.out.println("❌ PRODUCT 1 - Wishlist failed");
 
-            if (!wishlistClicked) {
-                System.out.println("❌❌❌ WISHLIST NOT FOUND WITH ANY XPATH!");
-            }
-
-            // Try multiple XPaths for ADD TO CART
-            System.out.println("\n🔍 Trying to find ADD TO CART button...");
-            boolean cartClicked = false;
-            
+            // ADD TO CART PRODUCT 1 - Using YOUR original XPaths
+            boolean cart1 = false;
             String[] cartXPaths = {
                 "//button[normalize-space()='Add to cart']",
                 "//button[contains(text(),'Add to cart')]",
-                "//button[contains(@class,'_2KpZ6l') and contains(text(),'cart')]",
+                "//button[contains(text(),'ADD TO CART')]",
                 "//li[@class='_1KDZP9']//button",
-                "//*[contains(text(),'ADD TO CART')]",
-                "//button[contains(@class,'_2KpZ6l _2U9uOA')]"
+                "//button[contains(@class,'_2KpZ6l _2U9uOA')]",
+                "//ul[@class='row']//button[contains(@class,'_2KpZ6l')]"
             };
 
             for (String xpath : cartXPaths) {
                 try {
                     WebElement cartBtn = driver.findElement(By.xpath(xpath));
-                    System.out.println("✅ Found cart button with xpath: " + xpath);
-                    
-                    // Highlight element
                     js.executeScript("arguments[0].style.border='5px solid blue'", cartBtn);
-                    Thread.sleep(1000);
-                    
-                    // Scroll to it
+                    Thread.sleep(500);
                     js.executeScript("arguments[0].scrollIntoView({block: 'center'});", cartBtn);
                     Thread.sleep(1000);
                     
-                    // JS click
-                    js.executeScript("arguments[0].click();", cartBtn);
-                    System.out.println("✅✅✅ ADD TO CART CLICKED!");
-                    cartClicked = true;
+                    // Remove any overlays
+                    js.executeScript("var overlays = document.querySelectorAll('[class*=\"overlay\"],[class*=\"modal\"]'); overlays.forEach(function(el){el.remove();});");
+                    
+                    // Force click
+                    forceClick(driver, cartBtn, js);
+                    
+                    System.out.println("✅✅ PRODUCT 1 - ADDED TO CART!");
+                    cart1 = true;
                     Thread.sleep(3000);
                     break;
-                } catch (Exception e) {
-                    // Silent fail, try next
+                } catch (Exception e) { 
+                    System.out.println("⚠️ Cart XPath failed: " + xpath);
                 }
             }
+            if (!cart1) System.out.println("❌ PRODUCT 1 - Add to cart failed");
 
-            if (!cartClicked) {
-                System.out.println("❌❌❌ ADD TO CART NOT FOUND WITH ANY XPATH!");
-            }
+            // Close this tab and go back
+            driver.close();
+            driver.switchTo().window(parentWindow);
+            Thread.sleep(2000);
+            System.out.println("✅ Back to search results");
 
-            // QUANTITY increase
-            System.out.println("\n🔍 Trying to increase QUANTITY...");
-            try {
-                Thread.sleep(2000);
-                js.executeScript("window.scrollBy(0, 300);");
-                Thread.sleep(1500);
-                
-                String[] quantityXPaths = {
-                    "//button[contains(@class,'_23FHuj')]",
-                    "//button[contains(@class,'qa-add-quantity')]",
-                    "//button[contains(text(),'+')]",
-                    "//button[@class='_23FHuj']",
-                    "//button[contains(@class,'qa-increaseQuantity')]"
-                };
-
-                WebElement plusBtn = null;
-                for (String xpath : quantityXPaths) {
-                    try {
-                        plusBtn = driver.findElement(By.xpath(xpath));
-                        System.out.println("✅ Found quantity button with xpath: " + xpath);
-                        break;
-                    } catch (Exception e) {
-                        // Silent fail
-                    }
-                }
-
-                if (plusBtn != null) {
-                    // Highlight
-                    js.executeScript("arguments[0].style.border='5px solid green'", plusBtn);
-                    Thread.sleep(1000);
-                    
-                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", plusBtn);
-                    Thread.sleep(1000);
-                    
-                    js.executeScript("arguments[0].click();", plusBtn);
-                    System.out.println("✅ Quantity increased to 2");
-                    Thread.sleep(1500);
-
-                    js.executeScript("arguments[0].click();", plusBtn);
-                    System.out.println("✅ Quantity increased to 3");
-                    Thread.sleep(1500);
-                    
-                    System.out.println("✅✅✅ QUANTITY SET TO 3!");
-                } else {
-                    System.out.println("❌❌❌ QUANTITY BUTTON NOT FOUND!");
-                }
-                
-            } catch (Exception e) {
-                System.out.println("❌ Quantity error: " + e.getMessage());
-            }
-
-            System.out.println("\n\n🔥🔥🔥 PROCESS COMPLETE! CHECK RESULTS ABOVE! 🔥🔥🔥");
+            // ========== PRODUCT 2 - Rungryp Running Shoes ==========
+            System.out.println("\n🔥 === PROCESSING PRODUCT 2 (Rungryp) === 🔥");
             
-            // Keep browser open
+            existingWindows = driver.getWindowHandles();
+            
+            // Click Rungryp product
+            boolean runGrypClicked = false;
+            String[] runGrypXPaths = {
+                "//a[contains(@title,'Rungryp')]",
+                "//div[contains(text(),'Rungryp')]/ancestor::a",
+                "//a[contains(@href,'/p/') and contains(.,'Rungryp')]",
+                "//a[contains(.,'Running Shoes')]"
+            };
+            
+            for (String xpath : runGrypXPaths) {
+                try {
+                    WebElement runGrypProduct = driver.findElement(By.xpath(xpath));
+                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", runGrypProduct);
+                    Thread.sleep(1000);
+                    js.executeScript("arguments[0].click();", runGrypProduct);
+                    System.out.println("✅ Clicked Rungryp product");
+                    runGrypClicked = true;
+                    Thread.sleep(4000);
+                    break;
+                } catch (Exception e) { }
+            }
+            
+            if (!runGrypClicked) {
+                System.out.println("⚠️ Rungryp not found, clicking second PUMA product");
+                WebElement secondProd = driver.findElement(By.xpath("(//a[contains(@href,'/p/')])[2]"));
+                js.executeScript("arguments[0].click();", secondProd);
+                Thread.sleep(4000);
+            }
+
+            // Switch to NEW tab
+            allWindows = driver.getWindowHandles();
+            for (String window : allWindows) {
+                if (!existingWindows.contains(window)) {
+                    driver.switchTo().window(window);
+                    System.out.println("✅ Switched to Rungryp product tab");
+                    break;
+                }
+            }
+            Thread.sleep(3000);
+
+            // Scroll down then up
+            js.executeScript("window.scrollTo({top: 500, behavior: 'smooth'});");
+            Thread.sleep(2000);
+            js.executeScript("window.scrollTo({top: 300, behavior: 'smooth'});");
+            Thread.sleep(2000);
+
+            // WISHLIST PRODUCT 2
+            boolean wishlist2 = false;
+            for (String xpath : wishlistXPaths) {
+                try {
+                    WebElement wishlistBtn = driver.findElement(By.xpath(xpath));
+                    js.executeScript("arguments[0].style.border='5px solid red'", wishlistBtn);
+                    Thread.sleep(500);
+                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", wishlistBtn);
+                    Thread.sleep(1000);
+                    js.executeScript("var overlays = document.querySelectorAll('[class*=\"overlay\"],[class*=\"modal\"]'); overlays.forEach(function(el){el.remove();});");
+                    forceClick(driver, wishlistBtn, js);
+                    System.out.println("✅✅ PRODUCT 2 - WISHLIST ADDED!");
+                    wishlist2 = true;
+                    Thread.sleep(2000);
+                    break;
+                } catch (Exception e) { }
+            }
+            if (!wishlist2) System.out.println("❌ PRODUCT 2 - Wishlist failed");
+
+            // ADD TO CART PRODUCT 2
+            boolean cart2 = false;
+            for (String xpath : cartXPaths) {
+                try {
+                    WebElement cartBtn = driver.findElement(By.xpath(xpath));
+                    js.executeScript("arguments[0].style.border='5px solid blue'", cartBtn);
+                    Thread.sleep(500);
+                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", cartBtn);
+                    Thread.sleep(1000);
+                    js.executeScript("var overlays = document.querySelectorAll('[class*=\"overlay\"],[class*=\"modal\"]'); overlays.forEach(function(el){el.remove();});");
+                    forceClick(driver, cartBtn, js);
+                    System.out.println("✅✅ PRODUCT 2 - ADDED TO CART!");
+                    cart2 = true;
+                    Thread.sleep(3000);
+                    break;
+                } catch (Exception e) { }
+            }
+            if (!cart2) System.out.println("❌ PRODUCT 2 - Add to cart failed");
+
+            // Close tab
+            driver.close();
+            driver.switchTo().window(parentWindow);
+            Thread.sleep(2000);
+
+            // ========== GO TO CART ==========
+            System.out.println("\n🛒 === NAVIGATING TO CART === 🛒");
+            driver.get("https://www.flipkart.com/viewcart");
+            System.out.println("✅ Opened cart page");
+            Thread.sleep(4000);
+
+            js.executeScript("window.scrollBy(0, 300);");
+            Thread.sleep(2000);
+
+            // ========== INCREMENT QUANTITY ==========
+            System.out.println("\n➕ Incrementing quantity...");
+            boolean quantityIncremented = false;
+            String[] incrementXPaths = {
+                "//button[contains(@class,'_23FHuj') or contains(@class,'qa-add')]",
+                "//button[contains(text(),'+')]",
+                "//*[contains(@class,'_23FHuj')]",
+                "//div[contains(@class,'_1vC4OE')]//button[2]"
+            };
+
+            for (String xpath : incrementXPaths) {
+                try {
+                    WebElement incrementBtn = driver.findElement(By.xpath(xpath));
+                    js.executeScript("arguments[0].style.border='5px solid green'", incrementBtn);
+                    Thread.sleep(500);
+                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", incrementBtn);
+                    Thread.sleep(1000);
+                    forceClick(driver, incrementBtn, js);
+                    System.out.println("✅✅ QUANTITY INCREMENTED!");
+                    quantityIncremented = true;
+                    Thread.sleep(3000);
+                    break;
+                } catch (Exception e) { }
+            }
+            if (!quantityIncremented) System.out.println("❌ Failed to increment");
+
+            // ========== REMOVE ITEM ==========
+            System.out.println("\n🗑️ Removing item...");
+            boolean itemRemoved = false;
+            String[] removeXPaths = {
+                "(//div[text()='Remove'])[1]",
+                "(//button[contains(text(),'Remove')])[1]",
+                "(//*[contains(text(),'Remove')])[1]",
+                "(//div[contains(@class,'_3dsJAO') and contains(text(),'Remove')])[1]"
+            };
+
+            for (String xpath : removeXPaths) {
+                try {
+                    WebElement removeBtn = driver.findElement(By.xpath(xpath));
+                    js.executeScript("arguments[0].style.border='5px solid red'", removeBtn);
+                    Thread.sleep(500);
+                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", removeBtn);
+                    Thread.sleep(1000);
+                    forceClick(driver, removeBtn, js);
+                    System.out.println("✅✅ ITEM REMOVED!");
+                    itemRemoved = true;
+                    Thread.sleep(2000);
+                    
+                    try {
+                        WebElement confirmRemove = driver.findElement(By.xpath("//div[contains(text(),'Remove')]"));
+                        forceClick(driver, confirmRemove, js);
+                        Thread.sleep(2000);
+                    } catch (Exception e) { }
+                    break;
+                } catch (Exception e) { }
+            }
+            if (!itemRemoved) System.out.println("❌ Failed to remove");
+
+            // ========== WISHLIST ==========
+            System.out.println("\n👤 === GOING TO WISHLIST === 👤");
+            driver.get("https://www.flipkart.com/wishlist");
+            Thread.sleep(4000);
+
+            js.executeScript("window.scrollBy(0, 300);");
+            Thread.sleep(2000);
+
+            System.out.println("\n🗑️ Removing PUMA from wishlist...");
+            boolean pumaRemoved = false;
+            String[] wishlistRemoveXPaths = {
+                "//div[contains(text(),'PUMA')]/ancestor::div[contains(@class,'_3O0U0u')]//div[contains(@class,'_3dtsli') and contains(text(),'Remove')]",
+                "//div[contains(text(),'PUMA')]/ancestor::div[contains(@class,'_3O0U0u')]//button[contains(text(),'Remove')]",
+                "(//div[contains(@class,'_3dtsli') and contains(text(),'Remove')])[1]",
+                "(//button[contains(text(),'Remove')])[1]"
+            };
+
+            for (String xpath : wishlistRemoveXPaths) {
+                try {
+                    WebElement removeBtn = driver.findElement(By.xpath(xpath));
+                    js.executeScript("arguments[0].style.border='5px solid orange'", removeBtn);
+                    Thread.sleep(500);
+                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", removeBtn);
+                    Thread.sleep(1000);
+                    forceClick(driver, removeBtn, js);
+                    System.out.println("✅✅ PUMA REMOVED FROM WISHLIST!");
+                    pumaRemoved = true;
+                    Thread.sleep(2000);
+                    break;
+                } catch (Exception e) { }
+            }
+            if (!pumaRemoved) System.out.println("❌ Failed to remove from wishlist");
+
+            System.out.println("\n\n🎉🎉🎉 ALL DONE BRUH! 🎉🎉🎉");
             Thread.sleep(15000);
 
         } catch (Exception e) {
-            System.out.println("💥 MAJOR ERROR: " + e.getMessage());
+            System.out.println("💥 ERROR: " + e.getMessage());
             e.printStackTrace();
         }
         
-        // Uncomment to close
         // driver.quit();
     }
 }
