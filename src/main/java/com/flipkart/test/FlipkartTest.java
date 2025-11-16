@@ -1,6 +1,7 @@
 package com.flipkart.test;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Set;
 
 import org.openqa.selenium.By;
@@ -85,7 +86,7 @@ public class FlipkartTest {
 
             
             // Enter mobile number
-            driver.findElement(By.xpath("//input[contains(@class,'r4vIwl') and contains(@class,'BV+Dqf')]")).sendKeys("9099428226");
+            driver.findElement(By.xpath("//input[contains(@class,'r4vIwl') and contains(@class,'BV+Dqf')]")).sendKeys("8799516975");
 
 
             // Click Request OTP / Continue
@@ -331,9 +332,24 @@ public class FlipkartTest {
 
             // ========== GO TO CART ==========
             System.out.println("\n🛒 === NAVIGATING TO CART === 🛒");
-            driver.get("https://www.flipkart.com/viewcart");
+            driver.get("https://www.flipkart.com/viewcart?exploreMode=true&preference=FLIPKART");
             System.out.println("✅ Opened cart page");
-            Thread.sleep(4000);
+            Thread.sleep(5000);
+            
+            // Check if cart is loading or empty, retry if needed
+            int retryCount = 0;
+            while (retryCount < 3) {
+                try {
+                    driver.findElement(By.xpath("//button[contains(@class,'LcLcvv')]"));
+                    System.out.println("✅ Cart loaded successfully!");
+                    break;
+                } catch (Exception e) {
+                    System.out.println("⚠️ Cart still loading or empty, refreshing... (Attempt " + (retryCount + 1) + ")");
+                    driver.navigate().refresh();
+                    Thread.sleep(5000);
+                    retryCount++;
+                }
+            }
 
             js.executeScript("window.scrollBy(0, 300);");
             Thread.sleep(2000);
@@ -341,27 +357,32 @@ public class FlipkartTest {
             // ========== INCREMENT QUANTITY ==========
             System.out.println("\n➕ Incrementing quantity...");
             boolean quantityIncremented = false;
-            String[] incrementXPaths = {
-                "//button[contains(@class,'_23FHuj') or contains(@class,'qa-add')]",
-                "//button[contains(text(),'+')]",
-                "//*[contains(@class,'_23FHuj')]",
-                "//div[contains(@class,'_1vC4OE')]//button[2]"
-            };
-
-            for (String xpath : incrementXPaths) {
-                try {
-                    WebElement incrementBtn = driver.findElement(By.xpath(xpath));
-                    js.executeScript("arguments[0].style.border='5px solid green'", incrementBtn);
-                    Thread.sleep(500);
-                    js.executeScript("arguments[0].scrollIntoView({block: 'center'});", incrementBtn);
-                    Thread.sleep(1000);
-                    forceClick(driver, incrementBtn, js);
-                    System.out.println("✅✅ QUANTITY INCREMENTED!");
-                    quantityIncremented = true;
-                    Thread.sleep(3000);
-                    break;
-                } catch (Exception e) { }
+            
+            // First find all LcLcvv buttons, then click the one with "+"
+            try {
+                List<WebElement> allButtons = driver.findElements(By.xpath("//button[@class='LcLcvv']"));
+                System.out.println("Found " + allButtons.size() + " LcLcvv buttons");
+                
+                for (WebElement btn : allButtons) {
+                    String btnText = btn.getText().trim();
+                    System.out.println("Button text: '" + btnText + "'");
+                    
+                    if (btnText.equals("+")) {
+                        js.executeScript("arguments[0].style.border='5px solid green'", btn);
+                        Thread.sleep(500);
+                        js.executeScript("arguments[0].scrollIntoView({block: 'center'});", btn);
+                        Thread.sleep(1000);
+                        forceClick(driver, btn, js);
+                        System.out.println("✅✅ QUANTITY INCREMENTED (+1)!");
+                        quantityIncremented = true;
+                        Thread.sleep(3000);
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("⚠️ Error finding + button: " + e.getMessage());
             }
+            
             if (!quantityIncremented) System.out.println("❌ Failed to increment");
 
             // ========== REMOVE ITEM ==========
@@ -419,15 +440,15 @@ public class FlipkartTest {
 
             System.out.println("\n🗑️ Removing PUMA from wishlist...");
             boolean pumaRemoved = false;
-            String[] wishlistRemoveXPaths = {
-                "//div[contains(text(),'PUMA')]/ancestor::div[contains(@class,'_1fkBrH')]//div[@class='EjOX7q CwZdGm pPzhjs']",
+            
+            // Click the bin icon (div with image inside)
+            String[] binXPaths = {
                 "(//div[@class='EjOX7q CwZdGm pPzhjs'])[1]",
-                "//div[contains(@class,'EjOX7q') and contains(@class,'CwZdGm')]",
-                "//div[contains(text(),'PUMA')]/ancestor::div[contains(@class,'_3O0U0u')]//div[contains(@class,'EjOX7q')]",
+                "(//div[contains(@class,'EjOX7q') and contains(@class,'CwZdGm') and contains(@class,'pPzhjs')])[1]",
                 "(//div[contains(@class,'EjOX7q')])[1]"
             };
 
-            for (String xpath : wishlistRemoveXPaths) {
+            for (String xpath : binXPaths) {
                 try {
                     WebElement binIcon = driver.findElement(By.xpath(xpath));
                     js.executeScript("arguments[0].style.border='5px solid orange'", binIcon);
@@ -435,10 +456,43 @@ public class FlipkartTest {
                     js.executeScript("arguments[0].scrollIntoView({block: 'center'});", binIcon);
                     Thread.sleep(1000);
                     forceClick(driver, binIcon, js);
-                    System.out.println("✅✅ BIN ICON CLICKED - PUMA REMOVED FROM WISHLIST!");
-                    pumaRemoved = true;
-                    Thread.sleep(2000);
+                    System.out.println("✅ Bin icon clicked, waiting for popup...");
+                    Thread.sleep(3000);
+                    
+                    // Now find and click "YES, REMOVE" button in popup
+                    String[] yesRemoveXPaths = {
+                        "//button[@class='QqFHMw AyekA8']",
+                        "//button[contains(@class,'QqFHMw') and contains(@class,'AyekA8')]",
+                        "//button[text()='YES, REMOVE']",
+                        "//button[contains(text(),'YES, REMOVE')]",
+                        "//button[contains(text(),'YES')]",
+                        "//button[contains(text(),'REMOVE')]"
+                    };
+                    
+                    boolean confirmClicked = false;
+                    for (String confirmXpath : yesRemoveXPaths) {
+                        try {
+                            WebElement yesRemoveBtn = driver.findElement(By.xpath(confirmXpath));
+                            js.executeScript("arguments[0].style.border='5px solid red'", yesRemoveBtn);
+                            Thread.sleep(500);
+                            js.executeScript("arguments[0].scrollIntoView({block: 'center'});", yesRemoveBtn);
+                            Thread.sleep(500);
+                            forceClick(driver, yesRemoveBtn, js);
+                            System.out.println("✅✅ 'YES, REMOVE' CLICKED - PUMA REMOVED!");
+                            confirmClicked = true;
+                            pumaRemoved = true;
+                            Thread.sleep(2000);
+                            break;
+                        } catch (Exception e) {
+                            System.out.println("⚠️ Trying next confirmation XPath...");
+                        }
+                    }
+                    
+                    if (!confirmClicked) {
+                        System.out.println("❌ Confirmation button not found in popup!");
+                    }
                     break;
+                    
                 } catch (Exception e) { 
                     System.out.println("⚠️ Trying next bin icon XPath...");
                 }
